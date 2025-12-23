@@ -41,7 +41,7 @@ export const EncryptSection: React.FC<EncryptSectionProps> = ({ availableKeys })
         plaintext,
       });
       setCiphertext(result);
-      setSuccessMessage('Message encrypted successfully with XWing.');
+      setSuccessMessage('Message encrypted successfully (mocked).');
     } catch (e: any) {
       setError(e.message || 'Failed to encrypt message.');
     } finally {
@@ -85,7 +85,7 @@ export const EncryptSection: React.FC<EncryptSectionProps> = ({ availableKeys })
           >
             {availableKeys.map(key => (
               <option key={key.keyId} value={key.keyId}>
-                {key.userId} (ID: {key.keyId.substring(0,8)}... - {key.algorithm})
+                {key.userId} (ID: {key.keyId.substring(0,8)}... - {key.algorithm.includes('Kyber') ? 'Kyber (suitable for encryption)' : key.algorithm})
               </option>
             ))}
           </select>

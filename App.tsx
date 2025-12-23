@@ -70,7 +70,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 transition-colors duration-300">
       <header className="bg-primary-600 dark:bg-primary-700 text-white shadow-md">
         <div className="container mx-auto px-4 py-6 flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight">PGP Tool <span className="text-sm font-normal">(XWing + Ed25519)</span></h1>
+          <h1 className="text-3xl font-bold tracking-tight">PGP Tool <span className="text-sm font-normal">(Mocked RPGP)</span></h1>
           <button
             onClick={toggleDarkMode}
             className="p-2 rounded-full hover:bg-primary-500 dark:hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-white"
@@ -82,11 +82,9 @@ const App: React.FC = () => {
       </header>
       
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-blue-100 dark:bg-blue-700 border-l-4 border-blue-500 dark:border-blue-400 text-blue-700 dark:text-blue-100 p-4 mb-6 rounded-md shadow" role="alert">
-          <p className="font-bold">Cryptography Implementation:</p>
-          <p>This application uses <strong className="font-semibold">real post-quantum cryptography</strong> from the <code>@noble/post-quantum</code> library.
-          <strong className="font-semibold"> XWing</strong> (ML-KEM-768 + X25519 hybrid encryption) is used for encryption, and <strong className="font-semibold">Ed25519</strong> is used for digital signatures.
-          All cryptographic operations are performed locally in your browser.</p>
+        <div className="bg-yellow-100 dark:bg-yellow-700 border-l-4 border-yellow-500 dark:border-yellow-400 text-yellow-700 dark:text-yellow-100 p-4 mb-6 rounded-md shadow" role="alert">
+          <p className="font-bold">Important Note:</p>
+          <p>This application uses a <strong className="font-semibold">mocked version</strong> of the <code>rpgp</code> library. Cryptographic operations are simulated and <strong className="font-semibold">NOT SECURE</strong>. A proper WebAssembly (WASM) build and integration of the actual <code>rpgp</code> Rust library would be required for real cryptographic functionality. The specified algorithms (Dilithium5 for signing, Kyber1024 for encryption) are part of this mock setup.</p>
         </div>
 
         <Tabs tabs={TABS} activeTabId={activeSection} onTabChange={(id) => setActiveSection(id as Section)} />
@@ -102,7 +100,7 @@ const App: React.FC = () => {
       </div>
 
       <footer className="text-center py-8 text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-700 mt-12">
-        <p>&copy; {new Date().getFullYear()} PGP Tool. Post-quantum cryptography powered by Noble.</p>
+        <p>&copy; {new Date().getFullYear()} PGP Tool (Mocked RPGP). For demonstration purposes only.</p>
       </footer>
     </div>
   );

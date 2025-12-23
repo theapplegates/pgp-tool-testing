@@ -1,6 +1,6 @@
 
-export const PRIMARY_SIGNING_ALGORITHM = "Ed25519";
-export const ENCRYPTION_SUBKEY_ALGORITHM = "XWing (ML-KEM-768 + X25519)";
+export const PRIMARY_SIGNING_ALGORITHM = "Dilithium5";
+export const ENCRYPTION_SUBKEY_ALGORITHM = "Kyber1024";
 
 export const GEMINI_MODEL_TEXT = "gemini-2.5-flash-preview-04-17";
 
