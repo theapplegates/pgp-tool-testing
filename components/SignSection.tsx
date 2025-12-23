@@ -24,9 +24,8 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
 
   useEffect(() => {
     if (availableKeys.length > 0 && !selectedPrivateKeyId) {
-       // Prefer keys that are likely for signing (Dilithium or general purpose)
-      const signingKey = availableKeys.find(k => k.algorithm.includes('Dilithium')) || availableKeys[0];
-      setSelectedPrivateKeyId(signingKey.keyId);
+      // Select the first available key
+      setSelectedPrivateKeyId(availableKeys[0].keyId);
     }
   }, [availableKeys, selectedPrivateKeyId]);
 
@@ -47,14 +46,14 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
             passphrase,
             message,
         });
-        setSuccessMessage('Detached signature created successfully (mocked).');
+        setSuccessMessage('Detached signature created successfully with Ed25519.');
       } else {
         result = await rpgpMockService.signMessage({
             privateKeyId: selectedPrivateKeyId,
             passphrase,
             message,
         });
-        setSuccessMessage('Message signed successfully (mocked, clear-signed format).');
+        setSuccessMessage('Message signed successfully with Ed25519 (clear-signed format).');
       }
       setSignedOutput(result);
       
@@ -102,7 +101,7 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
             >
                 {availableKeys.map(key => (
                 <option key={key.keyId} value={key.keyId}>
-                    {key.userId} (ID: {key.keyId.substring(0,8)}... - {key.algorithm.includes('Dilithium') ? 'Dilithium (suitable for signing)' : key.algorithm})
+                    {key.userId} (ID: {key.keyId.substring(0,8)}... - {key.algorithm})
                 </option>
                 ))}
             </select>
@@ -111,7 +110,7 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
             )}
         </div>
         <Input
-          label="Passphrase (if key is protected, 'testpass' for mock)"
+          label="Passphrase (if key is protected)"
           id="passphrase-sign"
           type="password"
           value={passphrase}

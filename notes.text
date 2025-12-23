@@ -1,0 +1,17 @@
+https://aistudio.google.com/apps/drive/1U7yyTxZlSvLJsblLmmdm3LEpDju_vklT?showPreview=true&showAssistant=true
+
+PGP Tool Mock
+
+
+hybrid: XWing, KitchenSink and others
+
+import {
+  ml_kem768_x25519, ml_kem768_p256, ml_kem1024_p384,
+  KitchenSink_ml_kem768_x25519, XWing,
+  QSF_ml_kem768_p256, QSF_ml_kem1024_p384,
+} from '@noble/post-quantum/hybrid.js';
+
+KitchenSink_ml_kem768_x25519: ML-KEM-768 + X25519 with HKDF-SHA256 combiner
+
+https://github.com/paulmillr/noble-post-quantum?tab=readme-ov-file#hybrid-xwing-kitchensink-and-others
+

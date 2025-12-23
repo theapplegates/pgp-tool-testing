@@ -76,12 +76,12 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
             disabled={isLoading}
           />
           <Input
-            label="Passphrase (Optional, 'testpass' for mock)"
+            label="Passphrase (Optional)"
             id="passphrase"
             type="password"
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
-            placeholder="Leave blank or use 'testpass'"
+            placeholder="Leave blank for no passphrase"
             disabled={isLoading}
           />
         </div>
@@ -148,7 +148,7 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
       {generatedKey && (
         <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Key Pair Details">
           <div className="space-y-4">
-            <Alert type="success" title="Key Pair Generated (Mock)" message={`Key ID: ${generatedKey.keyId}. Remember your passphrase if you set one!`} />
+            <Alert type="success" title="Key Pair Generated" message={`Key ID: ${generatedKey.keyId}. Remember your passphrase if you set one!`} />
             <div>
               <h4 className="font-semibold mb-1 text-neutral-800 dark:text-neutral-200">User ID:</h4>
               <p className="text-sm p-2 bg-neutral-100 dark:bg-neutral-700 rounded">{generatedKey.userId}</p>
@@ -160,8 +160,8 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
             </div>
             {'privateKeyArmored' in generatedKey && generatedKey.privateKeyArmored !== "Private key not available in this view." && (
               <div>
-                <h4 className="font-semibold mb-1 text-neutral-800 dark:text-neutral-200">Private Key (Mock - DO NOT USE FOR REAL DATA):</h4>
-                 <Alert type="warning" title="Mock Private Key" message="This is a mock private key. Do NOT use for any real sensitive data." />
+                <h4 className="font-semibold mb-1 text-neutral-800 dark:text-neutral-200">Private Key (Keep Secure!):</h4>
+                 <Alert type="warning" title="Private Key Security" message="Keep your private key secure. Never share it with anyone. Store it in a safe location." />
                 <TextArea value={generatedKey.privateKeyArmored} readOnly rows={8} className="text-xs font-mono" />
                 <Button size="sm" variant="secondary" onClick={() => copyToClipboard(generatedKey.privateKeyArmored, 'Private Key')} className="mt-2" leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}>Copy Private Key</Button>
               </div>

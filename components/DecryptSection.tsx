@@ -24,9 +24,8 @@ export const DecryptSection: React.FC<DecryptSectionProps> = ({ availableKeys })
 
   useEffect(() => {
     if (availableKeys.length > 0 && !selectedPrivateKeyId) {
-      // Prefer keys that are likely for decryption (Kyber or general purpose)
-      const decryptionKey = availableKeys.find(k => k.algorithm.includes('Kyber')) || availableKeys[0];
-      setSelectedPrivateKeyId(decryptionKey.keyId);
+      // Select the first available key
+      setSelectedPrivateKeyId(availableKeys[0].keyId);
     }
   }, [availableKeys, selectedPrivateKeyId]);
 
@@ -46,7 +45,7 @@ export const DecryptSection: React.FC<DecryptSectionProps> = ({ availableKeys })
         ciphertext,
       });
       setPlaintext(result);
-      setSuccessMessage('Message decrypted successfully (mocked).');
+      setSuccessMessage('Message decrypted successfully.');
     } catch (e: any) {
       setError(e.message || 'Failed to decrypt message.');
     } finally {
@@ -94,7 +93,7 @@ export const DecryptSection: React.FC<DecryptSectionProps> = ({ availableKeys })
             )}
         </div>
         <Input
-          label="Passphrase (if key is protected, 'testpass' for mock)"
+          label="Passphrase (if key is protected)"
           id="passphrase-decrypt"
           type="password"
           value={passphrase}

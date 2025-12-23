@@ -23,8 +23,8 @@ export const VerifySection: React.FC<VerifySectionProps> = ({ availableKeys }) =
 
   useEffect(() => {
     if (availableKeys.length > 0 && !selectedSignerKeyId) {
-      const signingKey = availableKeys.find(k => k.algorithm.includes('Dilithium')) || availableKeys[0];
-      setSelectedSignerKeyId(signingKey.keyId);
+      // Select the first available key
+      setSelectedSignerKeyId(availableKeys[0].keyId);
     }
   }, [availableKeys, selectedSignerKeyId]);
 
@@ -55,15 +55,15 @@ export const VerifySection: React.FC<VerifySectionProps> = ({ availableKeys }) =
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200">Verify Detached Signature</h2>
-      <Alert type="info" title="Note on Verification" message="This section currently supports verifying detached PGP signatures. For clear-signed messages, you would typically decrypt/verify them in the 'Decrypt' section (though this mock doesn't fully separate these concerns)." />
+      <Alert type="info" title="Note on Verification" message="This section supports verifying detached Ed25519 signatures. Paste the original message and the signature block below." />
       {error && <Alert type="error" message={error} className="mb-4" />}
-      
+
       {verificationResult && (
-        <Alert 
-            type={verificationResult.isValid ? "success" : "error"} 
-            title={verificationResult.isValid ? "Verification Successful (Mock)" : "Verification Failed (Mock)"}
+        <Alert
+            type={verificationResult.isValid ? "success" : "error"}
+            title={verificationResult.isValid ? "Verification Successful" : "Verification Failed"}
             message={verificationResult.message}
-            className="mb-4" 
+            className="mb-4"
         />
       )}
 
@@ -101,7 +101,7 @@ export const VerifySection: React.FC<VerifySectionProps> = ({ availableKeys }) =
           >
             {availableKeys.map(key => (
               <option key={key.keyId} value={key.keyId}>
-                {key.userId} (ID: {key.keyId.substring(0,8)}... - {key.algorithm.includes('Dilithium') ? 'Dilithium (signing)' : key.algorithm})
+                {key.userId} (ID: {key.keyId.substring(0,8)}... - {key.algorithm})
               </option>
             ))}
           </select>
