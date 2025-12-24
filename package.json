@@ -16,8 +16,8 @@
     "@noble/curves": "^2.0.1",
     "@noble/hashes": "^2.0.1",
     "@noble/post-quantum": "^0.5.4",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
