@@ -1,7 +1,7 @@
 import { XWing } from '@noble/post-quantum/hybrid.js';
 import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
 import { ed25519 } from '@noble/curves/ed25519.js';
-import { sha256, sha512 } from '@noble/hashes/sha2.js';
+import { sha3_512 } from '@noble/hashes/sha3.js';
 import { bytesToHex, concatBytes } from '@noble/hashes/utils.js';
 import { RpgpPublicKey, RpgpKeyPair, GenerateKeyParams, EncryptParams, DecryptParams, SignParams, VerifyParams } from '../types';
 import { PRIMARY_SIGNING_ALGORITHM, ENCRYPTION_SUBKEY_ALGORITHM } from '../constants';
@@ -10,6 +10,7 @@ import { PRIMARY_SIGNING_ALGORITHM, ENCRYPTION_SUBKEY_ALGORITHM } from '../const
  * REAL XWing Cryptographic Service
  * Implements XWing (ML-KEM-768 + X25519) for encryption and ML-DSA-65 + Ed25519 for signatures
  * Uses the official XWing KEM from @noble/post-quantum
+ * All hashing uses SHA3-512
  */
 
 const base64Encode = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
@@ -96,8 +97,8 @@ export const rpgpMockService = {
     // 2. Generate Encryption Keys using XWing (ML-KEM-768 + X25519)
     const xwingKeys = XWing.keygen();
 
-    const keyId = bytesToHex(sha256(concatBytes(dsaKeys.publicKey, edKeys.publicKey))).substring(0, 16).toUpperCase();
-    const fingerprint = bytesToHex(sha512(concatBytes(dsaKeys.publicKey, edKeys.publicKey))).toUpperCase();
+    const keyId = bytesToHex(sha3_512(concatBytes(dsaKeys.publicKey, edKeys.publicKey))).substring(0, 16).toUpperCase();
+    const fingerprint = bytesToHex(sha3_512(concatBytes(dsaKeys.publicKey, edKeys.publicKey))).toUpperCase();
     const formattedFingerprint = fingerprint.match(/.{1,4}/g)?.join(' ') || fingerprint;
 
     const pubObj = {
@@ -162,8 +163,8 @@ export const rpgpMockService = {
     // XWing KEM Encapsulation
     const { cipherText, sharedSecret } = XWing.encapsulate(xwingPub);
 
-    // Derive AES-256-GCM key from shared secret
-    const aesKeyBytes = sha256(sharedSecret);
+    // Derive AES-256-GCM key from shared secret using SHA3-512
+    const aesKeyBytes = sha3_512(sharedSecret).slice(0, 32);
 
     // AES-256-GCM Payload Encryption
     const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -197,8 +198,8 @@ export const rpgpMockService = {
     // XWing KEM Decapsulation
     const sharedSecret = XWing.decapsulate(xwingCt, xwingPriv);
 
-    // Derive AES-256-GCM key from shared secret
-    const aesKeyBytes = sha256(sharedSecret);
+    // Derive AES-256-GCM key from shared secret using SHA3-512
+    const aesKeyBytes = sha3_512(sharedSecret).slice(0, 32);
 
     // AES-256-GCM Decryption
     const cryptoKey = await crypto.subtle.importKey('raw', aesKeyBytes, 'AES-GCM', false, ['decrypt']);
@@ -228,7 +229,7 @@ export const rpgpMockService = {
     };
 
     const signatureArmor = wrapArmor('PGP SIGNATURE', sigData);
-    return `-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA512\n\n${params.message}\n\n${signatureArmor}`;
+    return `-----BEGIN PGP SIGNED MESSAGE-----\nHash: SHA3-512\n\n${params.message}\n\n${signatureArmor}`;
   },
 
   createDetachedSignature: async (params: SignParams): Promise<string> => {
