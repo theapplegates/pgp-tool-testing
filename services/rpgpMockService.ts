@@ -36,24 +36,23 @@ export const rpgpMockService = {
   generateKeyPair: async (params: GenerateKeyParams): Promise<RpgpKeyPair> => {
     // 1. Generate Signature Keys (ML-DSA-65 + Ed25519)
     const dsaKeys = ml_dsa65.keygen();
-    const edPriv = ed25519.utils.randomPrivateKey();
-    const edPub = ed25519.getPublicKey(edPriv);
+    const edKeys = ed25519.keygen();
 
     // 2. Generate Encryption Keys using XWing (ML-KEM-768 + X25519)
     const xwingKeys = XWing.keygen();
 
-    const keyId = bytesToHex(sha256(concatBytes(dsaKeys.publicKey, edPub))).substring(0, 16).toUpperCase();
-    const fingerprint = bytesToHex(sha512(concatBytes(dsaKeys.publicKey, edPub))).toUpperCase();
+    const keyId = bytesToHex(sha256(concatBytes(dsaKeys.publicKey, edKeys.publicKey))).substring(0, 16).toUpperCase();
+    const fingerprint = bytesToHex(sha512(concatBytes(dsaKeys.publicKey, edKeys.publicKey))).toUpperCase();
 
     const pubObj = {
       dsaPub: base64Encode(dsaKeys.publicKey),
-      edPub: base64Encode(edPub),
+      edPub: base64Encode(edKeys.publicKey),
       xwingPub: base64Encode(xwingKeys.publicKey)
     };
 
     const privObj = {
       dsaPriv: base64Encode(dsaKeys.secretKey),
-      edPriv: base64Encode(edPriv),
+      edPriv: base64Encode(edKeys.secretKey),
       xwingPriv: base64Encode(xwingKeys.secretKey)
     };
 
