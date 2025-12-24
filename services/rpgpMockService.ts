@@ -13,8 +13,25 @@ import { PRIMARY_SIGNING_ALGORITHM, ENCRYPTION_SUBKEY_ALGORITHM } from '../const
  * All hashing uses SHA3-512
  */
 
-const base64Encode = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
-const base64Decode = (str: string) => Uint8Array.from(atob(str), c => c.charCodeAt(0));
+// Proper base64 encoding that handles large byte arrays
+const base64Encode = (bytes: Uint8Array): string => {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+};
+
+const base64Decode = (str: string): Uint8Array => {
+  const binary = atob(str);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+};
 
 // In-memory store for session-based key persistence
 let keyStorage: RpgpKeyPair[] = [];
