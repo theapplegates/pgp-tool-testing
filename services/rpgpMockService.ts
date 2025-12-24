@@ -1,16 +1,15 @@
-import { ml_kem768 } from '@noble/post-quantum/ml_kem768';
-import { ml_dsa65 } from '@noble/post-quantum/ml_dsa65';
-import { ed25519, x25519 } from '@noble/curves/ed25519';
-import { sha512 } from '@noble/hashes/sha512';
-import { sha256 } from '@noble/hashes/sha256';
-import { bytesToHex, concatBytes } from '@noble/hashes/utils';
+import { XWing } from '@noble/post-quantum/hybrid.js';
+import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
+import { ed25519 } from '@noble/curves/ed25519.js';
+import { sha256, sha512 } from '@noble/hashes/sha2.js';
+import { bytesToHex, concatBytes } from '@noble/hashes/utils.js';
 import { RpgpPublicKey, RpgpKeyPair, GenerateKeyParams, EncryptParams, DecryptParams, SignParams, VerifyParams } from '../types';
 import { PRIMARY_SIGNING_ALGORITHM, ENCRYPTION_SUBKEY_ALGORITHM } from '../constants';
 
 /**
- * REAL Cryptographic Service
- * Implements XWing (ML-KEM-768 + X25519) and ML-DSA-65 + Ed25519
- * Fully functional cryptographic implementation using Noble libraries.
+ * REAL XWing Cryptographic Service
+ * Implements XWing (ML-KEM-768 + X25519) for encryption and ML-DSA-65 + Ed25519 for signatures
+ * Uses the official XWing KEM from @noble/post-quantum
  */
 
 const base64Encode = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
@@ -36,14 +35,12 @@ const unwrapArmor = (label: string, armored: string) => {
 export const rpgpMockService = {
   generateKeyPair: async (params: GenerateKeyParams): Promise<RpgpKeyPair> => {
     // 1. Generate Signature Keys (ML-DSA-65 + Ed25519)
-    const dsaKeys = ml_dsa65.generateKeyPair();
+    const dsaKeys = ml_dsa65.keygen();
     const edPriv = ed25519.utils.randomPrivateKey();
     const edPub = ed25519.getPublicKey(edPriv);
 
-    // 2. Generate Encryption Keys (ML-KEM-768 + X25519)
-    const kemKeys = ml_kem768.generateKeyPair();
-    const xPriv = x25519.utils.randomPrivateKey();
-    const xPub = x25519.getPublicKey(xPriv);
+    // 2. Generate Encryption Keys using XWing (ML-KEM-768 + X25519)
+    const xwingKeys = XWing.keygen();
 
     const keyId = bytesToHex(sha256(concatBytes(dsaKeys.publicKey, edPub))).substring(0, 16).toUpperCase();
     const fingerprint = bytesToHex(sha512(concatBytes(dsaKeys.publicKey, edPub))).toUpperCase();
@@ -51,15 +48,13 @@ export const rpgpMockService = {
     const pubObj = {
       dsaPub: base64Encode(dsaKeys.publicKey),
       edPub: base64Encode(edPub),
-      kemPub: base64Encode(kemKeys.publicKey),
-      xPub: base64Encode(xPub)
+      xwingPub: base64Encode(xwingKeys.publicKey)
     };
-    
+
     const privObj = {
-      dsaPriv: base64Encode(dsaKeys.privateKey),
+      dsaPriv: base64Encode(dsaKeys.secretKey),
       edPriv: base64Encode(edPriv),
-      kemPriv: base64Encode(kemKeys.privateKey),
-      xPriv: base64Encode(xPriv)
+      xwingPriv: base64Encode(xwingKeys.secretKey)
     };
 
     const keyPair: RpgpKeyPair = {
@@ -89,30 +84,25 @@ export const rpgpMockService = {
     if (!targetKey) throw new Error("Recipient key not found");
 
     const pubData = unwrapArmor('PGP PUBLIC KEY BLOCK', targetKey.publicKeyArmored);
-    const kemPub = base64Decode(pubData.kemPub);
-    const xPub = base64Decode(pubData.xPub);
+    const xwingPub = base64Decode(pubData.xwingPub);
 
-    // XWing Hybrid KEM Construction
-    // 1. ML-KEM Encapsulation
-    const { ciphertext: kemCt, sharedSecret: kemSs } = ml_kem768.encapsulate(kemPub);
+    // XWing KEM Encapsulation
+    const { cipherText, sharedSecret } = XWing.encapsulate(xwingPub);
 
-    // 2. X25519 Ephemeral Key Exchange
-    const ephemeralXPriv = x25519.utils.randomPrivateKey();
-    const ephemeralXPub = x25519.getPublicKey(ephemeralXPriv);
-    const xSs = x25519.getSharedSecret(ephemeralXPriv, xPub);
+    // Derive AES-256-GCM key from shared secret
+    const aesKeyBytes = sha256(sharedSecret);
 
-    // 3. XWing KDF (SHA256 of concatenated components)
-    const hybridSecret = sha256(concatBytes(kemSs, xSs, ephemeralXPub, xPub));
-    const aesKeyBytes = hybridSecret.slice(0, 32);
-
-    // 4. AES-256-GCM Payload Encryption
+    // AES-256-GCM Payload Encryption
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const cryptoKey = await crypto.subtle.importKey('raw', aesKeyBytes, 'AES-GCM', false, ['encrypt']);
-    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, cryptoKey, new TextEncoder().encode(params.plaintext));
+    const encrypted = await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      cryptoKey,
+      new TextEncoder().encode(params.plaintext)
+    );
 
     const msgData = {
-      kemCt: base64Encode(kemCt),
-      ephXPub: base64Encode(ephemeralXPub),
+      xwingCt: base64Encode(cipherText),
       iv: base64Encode(iv),
       ct: base64Encode(new Uint8Array(encrypted)),
       recipient: targetKey.keyId
@@ -128,26 +118,22 @@ export const rpgpMockService = {
     const privData = unwrapArmor('PGP PRIVATE KEY BLOCK', key.privateKeyArmored);
     const msgData = unwrapArmor('PGP MESSAGE', params.ciphertext);
 
-    const kemPriv = base64Decode(privData.kemPriv);
-    const xPriv = base64Decode(privData.xPriv);
-    const kemCt = base64Decode(msgData.kemCt);
-    const ephXPub = base64Decode(msgData.ephXPub);
+    const xwingPriv = base64Decode(privData.xwingPriv);
+    const xwingCt = base64Decode(msgData.xwingCt);
 
-    // 1. ML-KEM Decapsulation
-    const kemSs = ml_kem768.decapsulate(kemCt, kemPriv);
+    // XWing KEM Decapsulation
+    const sharedSecret = XWing.decapsulate(xwingCt, xwingPriv);
 
-    // 2. X25519 Decapsulation
-    const xSs = x25519.getSharedSecret(xPriv, ephXPub);
+    // Derive AES-256-GCM key from shared secret
+    const aesKeyBytes = sha256(sharedSecret);
 
-    // 3. Derive Symmetric Key
-    const pubData = unwrapArmor('PGP PUBLIC KEY BLOCK', key.publicKeyArmored);
-    const recipientXPub = base64Decode(pubData.xPub);
-    const hybridSecret = sha256(concatBytes(kemSs, xSs, ephXPub, recipientXPub));
-    const aesKeyBytes = hybridSecret.slice(0, 32);
-
-    // 4. AES-256-GCM Decryption
+    // AES-256-GCM Decryption
     const cryptoKey = await crypto.subtle.importKey('raw', aesKeyBytes, 'AES-GCM', false, ['decrypt']);
-    const decrypted = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: base64Decode(msgData.iv) }, cryptoKey, base64Decode(msgData.ct));
+    const decrypted = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: base64Decode(msgData.iv) },
+      cryptoKey,
+      base64Decode(msgData.ct)
+    );
 
     return new TextDecoder().decode(decrypted);
   },
@@ -199,14 +185,14 @@ export const rpgpMockService = {
     const sigData = unwrapArmor('PGP SIGNATURE', params.signature);
 
     const msgBytes = new TextEncoder().encode(params.message);
-    const dsaOk = ml_dsa65.verify(msgBytes, base64Decode(sigData.dsaSig), base64Decode(pubData.dsaPub));
+    const dsaOk = ml_dsa65.verify(base64Decode(sigData.dsaSig), msgBytes, base64Decode(pubData.dsaPub));
     const edOk = ed25519.verify(base64Decode(sigData.edSig), msgBytes, base64Decode(pubData.edPub));
 
     const isValid = dsaOk && edOk;
     return {
       isValid,
-      message: isValid 
-        ? `XWing-grade cryptographic integrity confirmed. Verified hybrid signature (ML-DSA-65 + Ed25519) for identity ${key.userId}.` 
+      message: isValid
+        ? `XWing-grade cryptographic integrity confirmed. Verified hybrid signature (ML-DSA-65 + Ed25519) for identity ${key.userId}.`
         : `Verification FAILED. Signature mismatch or data corruption detected.`
     };
   }
