@@ -18,15 +18,70 @@ const base64Decode = (str: string) => Uint8Array.from(atob(str), c => c.charCode
 // In-memory store for session-based key persistence
 let keyStorage: RpgpKeyPair[] = [];
 
-const wrapArmor = (label: string, data: any) => {
+interface ArmorMetadata {
+  userId?: string;
+  email?: string;
+  created?: Date;
+  expires?: Date;
+  type?: string;
+  usage?: string;
+  fingerprint?: string;
+}
+
+const wrapArmor = (label: string, data: any, metadata?: ArmorMetadata) => {
   const json = JSON.stringify(data);
   const encoded = base64Encode(new TextEncoder().encode(json));
-  return `-----BEGIN ${label}-----\n\n${encoded}\n-----END ${label}-----`;
+
+  let armor = `-----BEGIN ${label}-----\n`;
+
+  // Add metadata as comments
+  if (metadata) {
+    if (metadata.userId) {
+      armor += `Comment: User-ID:\t${metadata.userId}\n`;
+    }
+    if (metadata.email) {
+      armor += `Comment: a.k.a.:\t<${metadata.email}>\n`;
+    }
+    if (metadata.created) {
+      const dateStr = metadata.created.toLocaleString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+      armor += `Comment: Created:\t${dateStr}\n`;
+    }
+    if (metadata.expires) {
+      const dateStr = metadata.expires.toLocaleString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+      armor += `Comment: Expires:\t${dateStr}\n`;
+    }
+    if (metadata.type) {
+      armor += `Comment: Type:\t${metadata.type}\n`;
+    }
+    if (metadata.usage) {
+      armor += `Comment: Usage:\t${metadata.usage}\n`;
+    }
+    if (metadata.fingerprint) {
+      armor += `Comment: Fingerprint:\t${metadata.fingerprint}\n`;
+    }
+  }
+
+  armor += `\n${encoded}\n-----END ${label}-----`;
+  return armor;
 };
 
 const unwrapArmor = (label: string, armored: string) => {
   const lines = armored.split('\n');
-  const dataLine = lines.find(l => l && !l.startsWith('-----') && l.length > 20);
+  const dataLine = lines.find(l => l && !l.startsWith('-----') && !l.startsWith('Comment:') && l.trim().length > 20);
   if (!dataLine) throw new Error(`Invalid armored ${label} block format`);
   const decoded = base64Decode(dataLine);
   return JSON.parse(new TextDecoder().decode(decoded));
@@ -43,6 +98,7 @@ export const rpgpMockService = {
 
     const keyId = bytesToHex(sha256(concatBytes(dsaKeys.publicKey, edKeys.publicKey))).substring(0, 16).toUpperCase();
     const fingerprint = bytesToHex(sha512(concatBytes(dsaKeys.publicKey, edKeys.publicKey))).toUpperCase();
+    const formattedFingerprint = fingerprint.match(/.{1,4}/g)?.join(' ') || fingerprint;
 
     const pubObj = {
       dsaPub: base64Encode(dsaKeys.publicKey),
@@ -56,14 +112,32 @@ export const rpgpMockService = {
       xwingPriv: base64Encode(xwingKeys.secretKey)
     };
 
+    const createdAt = new Date();
+    const expiresAt = new Date(createdAt.getTime() + (3 * 365 * 24 * 60 * 60 * 1000)); // 3 years
+
+    // Extract email from userId if present (format: "Name <email@example.com>")
+    const emailMatch = params.userId.match(/<(.+?)>/);
+    const email = emailMatch ? emailMatch[1] : undefined;
+    const userName = emailMatch ? params.userId.replace(/<.+?>/, '').trim() : params.userId;
+
+    const metadata: ArmorMetadata = {
+      userId: userName,
+      email,
+      created: createdAt,
+      expires: expiresAt,
+      type: 'Post-Quantum Hybrid (secret key available)',
+      usage: 'Signing, Encryption, Certifying User-IDs',
+      fingerprint: formattedFingerprint
+    };
+
     const keyPair: RpgpKeyPair = {
       keyId,
-      fingerprint: fingerprint.match(/.{1,4}/g)?.join(' ') || fingerprint,
+      fingerprint: formattedFingerprint,
       userId: params.userId,
       algorithm: `${PRIMARY_SIGNING_ALGORITHM} / ${ENCRYPTION_SUBKEY_ALGORITHM}`,
-      publicKeyArmored: wrapArmor('PGP PUBLIC KEY BLOCK', pubObj),
-      privateKeyArmored: wrapArmor('PGP PRIVATE KEY BLOCK', privObj),
-      createdAt: new Date(),
+      publicKeyArmored: wrapArmor('PGP PUBLIC KEY BLOCK', pubObj, metadata),
+      privateKeyArmored: wrapArmor('PGP PRIVATE KEY BLOCK', privObj, { ...metadata, type: 'Post-Quantum Hybrid (secret key available)' }),
+      createdAt,
     };
 
     keyStorage.push(keyPair);
