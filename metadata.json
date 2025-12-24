@@ -1,5 +1,5 @@
 {
-  "name": "PGP Tool with RPGP (Mocked)",
-  "description": "A web application to perform PGP-like operations (key generation, encryption, decryption, signing, verification) using a mocked interface for the 'rpgp' library with Dilithium5 and Kyber1024. Includes a crypto term explainer using Gemini API.",
+  "name": "PGP Tool (Real XWing Edition)",
+  "description": "A cryptographic web application implementing real XWing (ML-KEM-768 + X25519) and hybrid signatures (ML-DSA-65 + Ed25519) using Noble libraries. Includes Gemini-powered crypto assistance.",
   "requestFramePermissions": []
 }

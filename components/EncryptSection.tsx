@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { TextArea } from './common/TextArea';
 import { Button } from './common/Button';
@@ -41,7 +40,7 @@ export const EncryptSection: React.FC<EncryptSectionProps> = ({ availableKeys })
         plaintext,
       });
       setCiphertext(result);
-      setSuccessMessage('Message encrypted successfully (mocked).');
+      setSuccessMessage('XWing encryption complete. Shared secret established using ML-KEM-768 and X25519.');
     } catch (e: any) {
       setError(e.message || 'Failed to encrypt message.');
     } finally {
@@ -58,22 +57,22 @@ export const EncryptSection: React.FC<EncryptSectionProps> = ({ availableKeys })
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200">Encrypt Message</h2>
+      <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200">Encrypt with XWing</h2>
       {error && <Alert type="error" message={error} className="mb-4" />}
       {successMessage && !error && <Alert type="success" message={successMessage} className="mb-4" />}
       
       <TextArea
-        label="Plaintext to Encrypt"
+        label="Message Payload"
         id="plaintext-encrypt"
         value={plaintext}
         onChange={(e) => setPlaintext(e.target.value)}
-        placeholder="Enter the message you want to encrypt..."
+        placeholder="Enter message to encrypt using hybrid post-quantum cryptography..."
         disabled={isLoading}
       />
 
       <div>
         <label htmlFor="recipientKey" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-          Recipient's Public Key
+          Target Recipient
         </label>
         {availableKeys.length > 0 ? (
           <select
@@ -85,12 +84,12 @@ export const EncryptSection: React.FC<EncryptSectionProps> = ({ availableKeys })
           >
             {availableKeys.map(key => (
               <option key={key.keyId} value={key.keyId}>
-                {key.userId} (ID: {key.keyId.substring(0,8)}... - {key.algorithm.includes('Kyber') ? 'Kyber (suitable for encryption)' : key.algorithm})
+                {key.userId} (ID: {key.keyId.substring(0,8)}...)
               </option>
             ))}
           </select>
         ) : (
-          <Alert type="info" message="No keys available. Please generate or import a key in the 'Key Management' section first." />
+          <Alert type="info" message="Generate a recipient key in 'Key Management' to perform encryption." />
         )}
       </div>
       
@@ -100,20 +99,20 @@ export const EncryptSection: React.FC<EncryptSectionProps> = ({ availableKeys })
         disabled={isLoading || !plaintext || !selectedRecipientKeyId || availableKeys.length === 0}
         leftIcon={<LockClosedIcon className="h-5 w-5" />}
       >
-        Encrypt Message
+        Perform XWing Encryption
       </Button>
 
-      {isLoading && <Spinner text="Encrypting..." />}
+      {isLoading && <Spinner text="Encapsulating keys and encrypting payload..." />}
 
       {ciphertext && (
         <div>
-          <h3 className="text-xl font-semibold text-neutral-800 dark:text-neutral-200 mt-6 mb-2">Encrypted Message (Ciphertext)</h3>
+          <h3 className="text-xl font-semibold text-neutral-800 dark:text-neutral-200 mt-6 mb-2">Encrypted Armor Block</h3>
           <TextArea
             id="ciphertext-output"
             value={ciphertext}
             readOnly
-            rows={10}
-            className="font-mono text-sm"
+            rows={8}
+            className="font-mono text-xs"
           />
           <Button 
             variant="secondary" 
@@ -122,7 +121,7 @@ export const EncryptSection: React.FC<EncryptSectionProps> = ({ availableKeys })
             className="mt-2"
             leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}
           >
-            Copy Ciphertext
+            Copy Armor Block
           </Button>
         </div>
       )}

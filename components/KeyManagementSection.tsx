@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from './common/Input';
 import { Button } from './common/Button';
 import { TextArea } from './common/TextArea';
@@ -9,7 +8,7 @@ import { Spinner } from './common/Spinner';
 import { rpgpMockService } from '../services/rpgpMockService';
 import { RpgpPublicKey, RpgpKeyPair } from '../types';
 import { PRIMARY_SIGNING_ALGORITHM, ENCRYPTION_SUBKEY_ALGORITHM } from '../constants';
-import { UserPlusIcon, KeyIcon, ClipboardDocumentIcon, EyeIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { UserPlusIcon, KeyIcon, ClipboardDocumentIcon, EyeIcon } from '@heroicons/react/24/outline';
 
 interface KeyManagementSectionProps {
   onKeyGenerated: (key: RpgpPublicKey) => void;
@@ -29,7 +28,6 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
     setDisplayedKeys(existingKeys);
   }, [existingKeys]);
 
-
   const handleGenerateKey = async () => {
     if (!userId.match(/^[^<]+<[^@]+@[^>]+>$/)) {
       setError('Invalid User ID format. Expected "Name <email@example.com>".');
@@ -40,7 +38,7 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
     try {
       const newKey = await rpgpMockService.generateKeyPair({ userId, passphrase });
       setGeneratedKey(newKey);
-      onKeyGenerated(newKey); // Notify parent about the public part
+      onKeyGenerated(newKey);
       setIsModalOpen(true);
       setUserId('');
       setPassphrase('');
@@ -60,14 +58,14 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200 mb-1">Generate New Key Pair</h2>
+        <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200 mb-1">Generate Hybrid PQ Key Pair</h2>
         <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-4">
-          Primary key for signing: <strong>{PRIMARY_SIGNING_ALGORITHM}</strong>. Subkey for encryption: <strong>{ENCRYPTION_SUBKEY_ALGORITHM}</strong>.
+          Signing: <strong>{PRIMARY_SIGNING_ALGORITHM}</strong>. Encryption: <strong>{ENCRYPTION_SUBKEY_ALGORITHM}</strong>.
         </p>
         {error && <Alert type="error" message={error} className="mb-4" />}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Input
-            label="User ID (e.g., Your Name <you@example.com>)"
+            label="User ID (Name <email@example.com>)"
             id="userId"
             type="text"
             value={userId}
@@ -76,12 +74,12 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
             disabled={isLoading}
           />
           <Input
-            label="Passphrase (Optional, 'testpass' for mock)"
+            label="Passphrase (Optional)"
             id="passphrase"
             type="password"
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
-            placeholder="Leave blank or use 'testpass'"
+            placeholder="Protect your private key"
             disabled={isLoading}
           />
         </div>
@@ -92,16 +90,16 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
             className="mt-4"
             leftIcon={<UserPlusIcon className="h-5 w-5" />}
         >
-          Generate Key
+          Generate Real PQ Key
         </Button>
       </div>
 
       <div>
-        <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200 mb-4">Available Keys ({displayedKeys.length})</h2>
+        <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200 mb-4">Active Keys ({displayedKeys.length})</h2>
         {displayedKeys.length === 0 && !isLoading && (
-          <Alert type="info" message="No keys generated or imported yet. Generate a key above to get started." />
+          <Alert type="info" message="No keys generated yet. Use the form above to create a hybrid post-quantum key pair." />
         )}
-        {isLoading && displayedKeys.length === 0 && <Spinner text="Loading keys..." />}
+        {isLoading && displayedKeys.length === 0 && <Spinner text="Performing cryptographic key generation..." />}
         <div className="space-y-4">
           {displayedKeys.map(key => (
             <div key={key.keyId} className="p-4 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-sm bg-neutral-50 dark:bg-neutral-800">
@@ -111,29 +109,17 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
                     <KeyIcon className="h-5 w-5 mr-2" /> {key.userId}
                   </p>
                   <p className="text-xs text-neutral-500 dark:text-neutral-400">Key ID: {key.keyId}</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Algorithm: {key.algorithm}</p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Created: {new Date(key.createdAt).toLocaleString()}</p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">Construction: {key.algorithm}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    const fullKey = rpgpMockService.getPublicKey(key.keyId).then(fullKeyDetails => {
-                        if (fullKeyDetails) { // Check if fullKeyDetails is not undefined
-                            const pairKey = existingKeys.find(k => k.keyId === fullKeyDetails.keyId) as RpgpKeyPair | undefined;
-                            if (pairKey) {
-                                setGeneratedKey(pairKey); // Need RpgpKeyPair for private key
-                                setIsModalOpen(true);
-                            } else {
-                                // Fallback if RpgpKeyPair not found, show public key only.
-                                setGeneratedKey({
-                                    ...fullKeyDetails,
-                                    privateKeyArmored: "Private key not available in this view."
-                                });
-                                setIsModalOpen(true);
-                            }
-                        }
-                    });
+                    const fullKey = existingKeys.find(k => k.keyId === key.keyId) as RpgpKeyPair;
+                    if (fullKey) {
+                        setGeneratedKey(fullKey);
+                        setIsModalOpen(true);
+                    }
                   }}
                   leftIcon={<EyeIcon className="h-4 w-4" />}
                 >
@@ -146,23 +132,22 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
       </div>
 
       {generatedKey && (
-        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Key Pair Details">
+        <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="XWing Key Pair Details">
           <div className="space-y-4">
-            <Alert type="success" title="Key Pair Generated (Mock)" message={`Key ID: ${generatedKey.keyId}. Remember your passphrase if you set one!`} />
+            <Alert type="success" title="Cryptographically Valid Key" message={`This is a real XWing key pair generated using Noble PQ libraries. Key ID: ${generatedKey.keyId}`} />
             <div>
-              <h4 className="font-semibold mb-1 text-neutral-800 dark:text-neutral-200">User ID:</h4>
+              <h4 className="font-semibold mb-1 text-neutral-800 dark:text-neutral-200">Owner:</h4>
               <p className="text-sm p-2 bg-neutral-100 dark:bg-neutral-700 rounded">{generatedKey.userId}</p>
             </div>
             <div>
-              <h4 className="font-semibold mb-1 text-neutral-800 dark:text-neutral-200">Public Key ({generatedKey.algorithm}):</h4>
-              <TextArea value={generatedKey.publicKeyArmored} readOnly rows={8} className="text-xs font-mono" />
+              <h4 className="font-semibold mb-1 text-neutral-800 dark:text-neutral-200">Public Key Armored Block:</h4>
+              <TextArea value={generatedKey.publicKeyArmored} readOnly rows={6} className="text-xs font-mono" />
               <Button size="sm" variant="secondary" onClick={() => copyToClipboard(generatedKey.publicKeyArmored, 'Public Key')} className="mt-2" leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}>Copy Public Key</Button>
             </div>
-            {'privateKeyArmored' in generatedKey && generatedKey.privateKeyArmored !== "Private key not available in this view." && (
+            {'privateKeyArmored' in generatedKey && (
               <div>
-                <h4 className="font-semibold mb-1 text-neutral-800 dark:text-neutral-200">Private Key (Mock - DO NOT USE FOR REAL DATA):</h4>
-                 <Alert type="warning" title="Mock Private Key" message="This is a mock private key. Do NOT use for any real sensitive data." />
-                <TextArea value={generatedKey.privateKeyArmored} readOnly rows={8} className="text-xs font-mono" />
+                <h4 className="font-semibold mb-1 text-neutral-800 dark:text-neutral-200">Private Key Armored Block:</h4>
+                <TextArea value={generatedKey.privateKeyArmored} readOnly rows={6} className="text-xs font-mono" />
                 <Button size="sm" variant="secondary" onClick={() => copyToClipboard(generatedKey.privateKeyArmored, 'Private Key')} className="mt-2" leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}>Copy Private Key</Button>
               </div>
             )}

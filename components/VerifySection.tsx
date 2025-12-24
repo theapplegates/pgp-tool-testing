@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { TextArea } from './common/TextArea';
 import { Button } from './common/Button';
@@ -14,23 +13,21 @@ interface VerifySectionProps {
 
 export const VerifySection: React.FC<VerifySectionProps> = ({ availableKeys }) => {
   const [message, setMessage] = useState('');
-  const [signature, setSignature] = useState(''); // For detached signatures
+  const [signature, setSignature] = useState('');
   const [selectedSignerKeyId, setSelectedSignerKeyId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [verificationResult, setVerificationResult] = useState<{isValid: boolean, message: string} | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-
   useEffect(() => {
     if (availableKeys.length > 0 && !selectedSignerKeyId) {
-      const signingKey = availableKeys.find(k => k.algorithm.includes('Dilithium')) || availableKeys[0];
-      setSelectedSignerKeyId(signingKey.keyId);
+      setSelectedSignerKeyId(availableKeys[0].keyId);
     }
   }, [availableKeys, selectedSignerKeyId]);
 
   const handleVerify = async () => {
     if (!message || !signature || !selectedSignerKeyId) {
-      setError('Original message, signature, and a signer key selection are required for detached signature verification.');
+      setError('Original message, signature, and signer identity are required.');
       setVerificationResult(null);
       return;
     }
@@ -45,7 +42,7 @@ export const VerifySection: React.FC<VerifySectionProps> = ({ availableKeys }) =
       });
       setVerificationResult(result);
     } catch (e: any) {
-      setError(e.message || 'Failed to verify signature.');
+      setError(e.message || 'Verification engine failed.');
       setVerificationResult(null);
     } finally {
       setIsLoading(false);
@@ -54,42 +51,42 @@ export const VerifySection: React.FC<VerifySectionProps> = ({ availableKeys }) =
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200">Verify Detached Signature</h2>
-      <Alert type="info" title="Note on Verification" message="This section currently supports verifying detached PGP signatures. For clear-signed messages, you would typically decrypt/verify them in the 'Decrypt' section (though this mock doesn't fully separate these concerns)." />
+      <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200">Hybrid Verify</h2>
+      <Alert type="info" title="Verification Engine" message="This tool performs dual-layer verification. It checks both the ML-DSA-65 post-quantum signature and the Ed25519 classical signature." />
       {error && <Alert type="error" message={error} className="mb-4" />}
       
       {verificationResult && (
         <Alert 
             type={verificationResult.isValid ? "success" : "error"} 
-            title={verificationResult.isValid ? "Verification Successful (Mock)" : "Verification Failed (Mock)"}
+            title={verificationResult.isValid ? "Verification Valid" : "Verification Invalid"}
             message={verificationResult.message}
             className="mb-4" 
         />
       )}
 
       <TextArea
-        label="Original Message"
+        label="Original Plaintext"
         id="message-verify"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        placeholder="Paste the original, unaltered message here..."
+        placeholder="Original message content..."
         disabled={isLoading}
-        rows={6}
+        rows={4}
       />
 
       <TextArea
-        label="Detached Signature (PGP SIGNATURE block)"
+        label="Detached Signature Armor Block"
         id="signature-verify"
         value={signature}
         onChange={(e) => setSignature(e.target.value)}
-        placeholder="Paste the PGP signature block here (starts with -----BEGIN PGP SIGNATURE-----)..."
+        placeholder="Paste PGP SIGNATURE block here..."
         disabled={isLoading}
-        rows={6}
+        rows={4}
       />
 
       <div>
         <label htmlFor="signerKeyVerify" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-          Signer's Public Key (select by ID)
+          Select Expected Signer
         </label>
         {availableKeys.length > 0 ? (
           <select
@@ -101,12 +98,12 @@ export const VerifySection: React.FC<VerifySectionProps> = ({ availableKeys }) =
           >
             {availableKeys.map(key => (
               <option key={key.keyId} value={key.keyId}>
-                {key.userId} (ID: {key.keyId.substring(0,8)}... - {key.algorithm.includes('Dilithium') ? 'Dilithium (signing)' : key.algorithm})
+                {key.userId} (ID: {key.keyId.substring(0,8)}...)
               </option>
             ))}
           </select>
         ) : (
-          <Alert type="info" message="No keys available. Please generate or import a key in 'Key Management'." />
+          <Alert type="info" message="No identities available for verification. Generate or import a key first." />
         )}
       </div>
       
@@ -116,10 +113,10 @@ export const VerifySection: React.FC<VerifySectionProps> = ({ availableKeys }) =
         disabled={isLoading || !message || !signature || !selectedSignerKeyId || availableKeys.length === 0}
         leftIcon={<CheckBadgeIcon className="h-5 w-5" />}
       >
-        Verify Signature
+        Verify Hybrid Signature
       </Button>
 
-      {isLoading && <Spinner text="Verifying..." />}
+      {isLoading && <Spinner text="Performing cryptographic verification..." />}
     </div>
   );
 };

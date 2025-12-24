@@ -1,5 +1,5 @@
 {
-  "name": "pgp-tool-with-rpgp-(mocked)",
+  "name": "pgp-tool-(real-xwing-edition)",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,11 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.1.0",
-    "react": "^19.1.0",
+    "react-dom": "19.1.0",
+    "react": "19.1.0",
+    "@headlessui/react": "2.2.4",
+    "@google/genai": "1.2.0",
     "@heroicons/react": "^2.2.0",
-    "@headlessui/react": "^2.2.4",
-    "@google/genai": "^1.2.0"
+    "@noble/curves": "^2.0.1",
+    "@noble/hashes": "^2.0.1",
+    "@noble/post-quantum": "^0.5.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

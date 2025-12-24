@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { TextArea } from './common/TextArea';
 import { Input } from './common/Input';
@@ -6,11 +5,11 @@ import { Button } from './common/Button';
 import { Alert } from './common/Alert';
 import { Spinner } from './common/Spinner';
 import { rpgpMockService } from '../services/rpgpMockService';
-import { RpgpPublicKey } from '../types'; // Using RpgpPublicKey for selection; service handles private key lookup
+import { RpgpPublicKey } from '../types';
 import { LockOpenIcon } from '@heroicons/react/24/outline';
 
 interface DecryptSectionProps {
-  availableKeys: RpgpPublicKey[]; // These are public keys, but we use their ID to find the mock private key
+  availableKeys: RpgpPublicKey[];
 }
 
 export const DecryptSection: React.FC<DecryptSectionProps> = ({ availableKeys }) => {
@@ -24,15 +23,13 @@ export const DecryptSection: React.FC<DecryptSectionProps> = ({ availableKeys })
 
   useEffect(() => {
     if (availableKeys.length > 0 && !selectedPrivateKeyId) {
-      // Prefer keys that are likely for decryption (Kyber or general purpose)
-      const decryptionKey = availableKeys.find(k => k.algorithm.includes('Kyber')) || availableKeys[0];
-      setSelectedPrivateKeyId(decryptionKey.keyId);
+      setSelectedPrivateKeyId(availableKeys[0].keyId);
     }
   }, [availableKeys, selectedPrivateKeyId]);
 
   const handleDecrypt = async () => {
     if (!ciphertext || !selectedPrivateKeyId) {
-      setError('Ciphertext and a private key selection are required.');
+      setError('Ciphertext and a private key are required.');
       return;
     }
     setError(null);
@@ -46,7 +43,7 @@ export const DecryptSection: React.FC<DecryptSectionProps> = ({ availableKeys })
         ciphertext,
       });
       setPlaintext(result);
-      setSuccessMessage('Message decrypted successfully (mocked).');
+      setSuccessMessage('XWing decapsulation successful. Hybrid shared secret recovered.');
     } catch (e: any) {
       setError(e.message || 'Failed to decrypt message.');
     } finally {
@@ -56,24 +53,24 @@ export const DecryptSection: React.FC<DecryptSectionProps> = ({ availableKeys })
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200">Decrypt Message</h2>
+      <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200">XWing Decryption</h2>
       {error && <Alert type="error" message={error} className="mb-4" />}
       {successMessage && !error &&<Alert type="success" message={successMessage} className="mb-4" />}
 
       <TextArea
-        label="Ciphertext to Decrypt"
+        label="XWing Encrypted Armor Block"
         id="ciphertext-decrypt"
         value={ciphertext}
         onChange={(e) => setCiphertext(e.target.value)}
-        placeholder="Paste the PGP encrypted message here..."
+        placeholder="Paste your encrypted PGP armor block here..."
         disabled={isLoading}
-        rows={8}
+        rows={6}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
             <label htmlFor="privateKeyDecrypt" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-            Your Private Key (select by ID)
+            Selected Identity
             </label>
             {availableKeys.length > 0 ? (
             <select
@@ -90,16 +87,16 @@ export const DecryptSection: React.FC<DecryptSectionProps> = ({ availableKeys })
                 ))}
             </select>
             ) : (
-            <Alert type="info" message="No keys available. Please generate one in 'Key Management'." />
+            <Alert type="info" message="No private keys found. Please generate an XWing key pair first." />
             )}
         </div>
         <Input
-          label="Passphrase (if key is protected, 'testpass' for mock)"
+          label="Passphrase"
           id="passphrase-decrypt"
           type="password"
           value={passphrase}
           onChange={(e) => setPassphrase(e.target.value)}
-          placeholder="Enter passphrase for the selected key"
+          placeholder="Private key passphrase"
           disabled={isLoading || !selectedPrivateKeyId}
         />
       </div>
@@ -113,16 +110,16 @@ export const DecryptSection: React.FC<DecryptSectionProps> = ({ availableKeys })
         Decrypt Message
       </Button>
 
-      {isLoading && <Spinner text="Decrypting..." />}
+      {isLoading && <Spinner text="Decapsulating and decrypting..." />}
 
       {plaintext && (
         <div>
-          <h3 className="text-xl font-semibold text-neutral-800 dark:text-neutral-200 mt-6 mb-2">Decrypted Message (Plaintext)</h3>
+          <h3 className="text-xl font-semibold text-neutral-800 dark:text-neutral-200 mt-6 mb-2">Recovered Plaintext</h3>
           <TextArea
             id="plaintext-output"
             value={plaintext}
             readOnly
-            rows={8}
+            rows={6}
             className="bg-green-50 dark:bg-green-900 border-green-500"
           />
         </div>

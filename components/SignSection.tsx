@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { TextArea } from './common/TextArea';
 import { Input } from './common/Input';
@@ -17,22 +16,20 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
   const [message, setMessage] = useState('');
   const [selectedPrivateKeyId, setSelectedPrivateKeyId] = useState<string>('');
   const [passphrase, setPassphrase] = useState('');
-  const [signedOutput, setSignedOutput] = useState(''); // Can be signed message or detached signature
+  const [signedOutput, setSignedOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (availableKeys.length > 0 && !selectedPrivateKeyId) {
-       // Prefer keys that are likely for signing (Dilithium or general purpose)
-      const signingKey = availableKeys.find(k => k.algorithm.includes('Dilithium')) || availableKeys[0];
-      setSelectedPrivateKeyId(signingKey.keyId);
+      setSelectedPrivateKeyId(availableKeys[0].keyId);
     }
   }, [availableKeys, selectedPrivateKeyId]);
 
   const handleSign = async (detached: boolean) => {
     if (!message || !selectedPrivateKeyId) {
-      setError('Message and a private key selection are required.');
+      setError('Message and a private key are required.');
       return;
     }
     setError(null);
@@ -47,14 +44,14 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
             passphrase,
             message,
         });
-        setSuccessMessage('Detached signature created successfully (mocked).');
+        setSuccessMessage('Detached hybrid signature created.');
       } else {
         result = await rpgpMockService.signMessage({
             privateKeyId: selectedPrivateKeyId,
             passphrase,
             message,
         });
-        setSuccessMessage('Message signed successfully (mocked, clear-signed format).');
+        setSuccessMessage('Message signed with hybrid construction.');
       }
       setSignedOutput(result);
       
@@ -74,7 +71,7 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200">Sign Message</h2>
+      <h2 className="text-2xl font-semibold text-neutral-800 dark:text-neutral-200">Hybrid PQ Signature</h2>
       {error && <Alert type="error" message={error} className="mb-4" />}
       {successMessage && !error && <Alert type="success" message={successMessage} className="mb-4" />}
 
@@ -83,14 +80,14 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
         id="message-sign"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        placeholder="Enter the message you want to sign..."
+        placeholder="Enter text to sign using ML-DSA-65 and Ed25519..."
         disabled={isLoading}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
             <label htmlFor="privateKeySign" className="block text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-1">
-            Your Signing Key (select by ID)
+            Signing Identity
             </label>
             {availableKeys.length > 0 ? (
             <select
@@ -102,21 +99,21 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
             >
                 {availableKeys.map(key => (
                 <option key={key.keyId} value={key.keyId}>
-                    {key.userId} (ID: {key.keyId.substring(0,8)}... - {key.algorithm.includes('Dilithium') ? 'Dilithium (suitable for signing)' : key.algorithm})
+                    {key.userId} (ID: {key.keyId.substring(0,8)}...)
                 </option>
                 ))}
             </select>
             ) : (
-            <Alert type="info" message="No keys available. Please generate one in 'Key Management'." />
+            <Alert type="info" message="Generate a signing key in 'Key Management' first." />
             )}
         </div>
         <Input
-          label="Passphrase (if key is protected, 'testpass' for mock)"
+          label="Passphrase"
           id="passphrase-sign"
           type="password"
           value={passphrase}
           onChange={(e) => setPassphrase(e.target.value)}
-          placeholder="Enter passphrase for the selected key"
+          placeholder="Unlock private key"
           disabled={isLoading || !selectedPrivateKeyId}
         />
       </div>
@@ -128,7 +125,7 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
             disabled={isLoading || !message || !selectedPrivateKeyId || availableKeys.length === 0}
             leftIcon={<PencilSquareIcon className="h-5 w-5" />}
         >
-            Sign (Clear-Signed)
+            Clear-Sign Message
         </Button>
         <Button 
             onClick={() => handleSign(true)} 
@@ -141,26 +138,26 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
         </Button>
       </div>
 
-      {isLoading && <Spinner text="Signing..." />}
+      {isLoading && <Spinner text="Calculating ML-DSA and Ed25519 signatures..." />}
 
       {signedOutput && (
         <div>
-          <h3 className="text-xl font-semibold text-neutral-800 dark:text-neutral-200 mt-6 mb-2">Signed Output</h3>
+          <h3 className="text-xl font-semibold text-neutral-800 dark:text-neutral-200 mt-6 mb-2">Signature Armor Block</h3>
           <TextArea
             id="signed-output"
             value={signedOutput}
             readOnly
             rows={10}
-            className="font-mono text-sm"
+            className="font-mono text-xs"
           />
            <Button 
             variant="secondary" 
             size="sm" 
-            onClick={() => copyToClipboard(signedOutput, "Signed output")}
+            onClick={() => copyToClipboard(signedOutput, "Signature block")}
             className="mt-2"
             leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}
           >
-            Copy Output
+            Copy Signature
           </Button>
         </div>
       )}

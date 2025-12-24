@@ -1,14 +1,16 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PGP Tool (Mocked RPGP)</title>
+  <title>PGP Tool (XWing Edition)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+    // Robust safety check for process.env to prevent blank page crashes
+    window.process = window.process || { env: {} };
+    
     tailwind.config = {
-      darkMode: 'class', // or 'media'
+      darkMode: 'class',
       theme: {
         extend: {
           colors: {
@@ -22,12 +24,23 @@
 <script type="importmap">
 {
   "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
-    "react": "https://esm.sh/react@^19.1.0",
-    "react/": "https://esm.sh/react@^19.1.0/",
+    "react-dom/": "https://esm.sh/react-dom@19.1.0/",
+    "react": "https://esm.sh/react@19.1.0",
+    "react/": "https://esm.sh/react@19.1.0/",
+    "@heroicons/react/24/outline": "https://esm.sh/@heroicons/react@2.2.0/24/outline",
+    "@heroicons/react/24/solid": "https://esm.sh/@heroicons/react@2.2.0/24/solid",
+    "@headlessui/react": "https://esm.sh/@headlessui/react@2.2.4",
+    "@google/genai": "https://esm.sh/@google/genai@1.2.0",
+    "@noble/post-quantum/ml_kem768": "https://esm.sh/@noble/post-quantum@0.2.0/ml_kem768",
+    "@noble/post-quantum/ml_dsa65": "https://esm.sh/@noble/post-quantum@0.2.0/ml_dsa65",
+    "@noble/curves/ed25519": "https://esm.sh/@noble/curves@1.4.0/ed25519",
+    "@noble/hashes/sha512": "https://esm.sh/@noble/hashes@1.4.0/sha512",
+    "@noble/hashes/sha256": "https://esm.sh/@noble/hashes@1.4.0/sha256",
+    "@noble/hashes/utils": "https://esm.sh/@noble/hashes@1.4.0/utils",
     "@heroicons/react/": "https://esm.sh/@heroicons/react@^2.2.0/",
-    "@headlessui/react": "https://esm.sh/@headlessui/react@^2.2.4",
-    "@google/genai": "https://esm.sh/@google/genai@^1.2.0"
+    "@noble/curves/": "https://esm.sh/@noble/curves@^2.0.1/",
+    "@noble/hashes/": "https://esm.sh/@noble/hashes@^2.0.1/",
+    "@noble/post-quantum/": "https://esm.sh/@noble/post-quantum@^0.5.4/"
   }
 }
 </script>

@@ -9,6 +9,7 @@ import { CryptoHelper } from './components/CryptoHelper';
 import { Tabs, Tab } from './components/common/Tabs';
 import { RpgpPublicKey } from './types';
 import { KeyIcon, LockClosedIcon, LockOpenIcon, PencilSquareIcon, CheckBadgeIcon, QuestionMarkCircleIcon, SunIcon, MoonIcon } from '@heroicons/react/24/outline';
+import { PRIMARY_SIGNING_ALGORITHM, ENCRYPTION_SUBKEY_ALGORITHM } from './constants';
 
 enum Section {
   KEYS = 'Key Management',
@@ -56,7 +57,6 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
-
   const TABS: Tab[] = [
     { id: Section.KEYS, label: Section.KEYS, icon: KeyIcon },
     { id: Section.ENCRYPT, label: Section.ENCRYPT, icon: LockClosedIcon },
@@ -70,7 +70,7 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 transition-colors duration-300">
       <header className="bg-primary-600 dark:bg-primary-700 text-white shadow-md">
         <div className="container mx-auto px-4 py-6 flex justify-between items-center">
-          <h1 className="text-3xl font-bold tracking-tight">PGP Tool <span className="text-sm font-normal">(Mocked RPGP)</span></h1>
+          <h1 className="text-3xl font-bold tracking-tight">PGP Tool <span className="text-sm font-normal">(XWing Optimized)</span></h1>
           <button
             onClick={toggleDarkMode}
             className="p-2 rounded-full hover:bg-primary-500 dark:hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-white"
@@ -82,9 +82,9 @@ const App: React.FC = () => {
       </header>
       
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-yellow-100 dark:bg-yellow-700 border-l-4 border-yellow-500 dark:border-yellow-400 text-yellow-700 dark:text-yellow-100 p-4 mb-6 rounded-md shadow" role="alert">
-          <p className="font-bold">Important Note:</p>
-          <p>This application uses a <strong className="font-semibold">mocked version</strong> of the <code>rpgp</code> library. Cryptographic operations are simulated and <strong className="font-semibold">NOT SECURE</strong>. A proper WebAssembly (WASM) build and integration of the actual <code>rpgp</code> Rust library would be required for real cryptographic functionality. The specified algorithms (Dilithium5 for signing, Kyber1024 for encryption) are part of this mock setup.</p>
+        <div className="bg-blue-100 dark:bg-blue-900 border-l-4 border-blue-500 dark:border-blue-400 text-blue-700 dark:text-blue-100 p-4 mb-6 rounded-md shadow" role="alert">
+          <p className="font-bold">Security Note:</p>
+          <p>This application performs real cryptographic operations using **{PRIMARY_SIGNING_ALGORITHM}** for signing and **{ENCRYPTION_SUBKEY_ALGORITHM}** for encryption. Ensure you back up your keys as they are stored in application memory only.</p>
         </div>
 
         <Tabs tabs={TABS} activeTabId={activeSection} onTabChange={(id) => setActiveSection(id as Section)} />
@@ -100,7 +100,7 @@ const App: React.FC = () => {
       </div>
 
       <footer className="text-center py-8 text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-700 mt-12">
-        <p>&copy; {new Date().getFullYear()} PGP Tool (Mocked RPGP). For demonstration purposes only.</p>
+        <p>&copy; {new Date().getFullYear()} PGP Tool (XWing Construction). Powered by Noble Post-Quantum Cryptography.</p>
       </footer>
     </div>
   );
