@@ -1,15 +1,17 @@
-import { XWing } from '@noble/post-quantum/hybrid.js';
-import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
+import { ml_kem1024 } from '@noble/post-quantum/ml-kem.js';
+import { slh_dsa_sha2_256s } from '@noble/post-quantum/slh-dsa.js';
 import { ed25519 } from '@noble/curves/ed25519.js';
+import { x448 } from '@noble/curves/ed448.js';
 import { sha3_512 } from '@noble/hashes/sha3.js';
 import { bytesToHex, concatBytes } from '@noble/hashes/utils.js';
 import { RpgpPublicKey, RpgpKeyPair, GenerateKeyParams, EncryptParams, DecryptParams, SignParams, VerifyParams } from '../types';
 import { PRIMARY_SIGNING_ALGORITHM, ENCRYPTION_SUBKEY_ALGORITHM } from '../constants';
 
 /**
- * REAL XWing Cryptographic Service
- * Implements XWing (ML-KEM-768 + X25519) for encryption and ML-DSA-65 + Ed25519 for signatures
- * Uses the official XWing KEM from @noble/post-quantum
+ * Post-Quantum Cryptographic Service
+ * Implements MLKEM1024_X448 hybrid for encryption and SLHDSA256s + Ed25519 for signatures
+ * Uses NIST FIPS 203 (ML-KEM-1024) + RFC 7748 (X448) hybrid KEM
+ * Uses NIST FIPS 205 (SLH-DSA-SHA2-256s) for hash-based signatures
  * All hashing uses SHA3-512
  */
 
@@ -107,27 +109,32 @@ const unwrapArmor = (label: string, armored: string) => {
 
 export const rpgpMockService = {
   generateKeyPair: async (params: GenerateKeyParams): Promise<RpgpKeyPair> => {
-    // 1. Generate Signature Keys (ML-DSA-65 + Ed25519)
-    const dsaKeys = ml_dsa65.keygen();
+    // 1. Generate Signature Keys (SLH-DSA-SHA2-256s + Ed25519)
+    const slhdsaKeys = slh_dsa_sha2_256s.keygen();
     const edKeys = ed25519.keygen();
 
-    // 2. Generate Encryption Keys using XWing (ML-KEM-768 + X25519)
-    const xwingKeys = XWing.keygen();
+    // 2. Generate Encryption Keys using hybrid ML-KEM-1024 + X448
+    const mlkemKeys = ml_kem1024.keygen();
+    const x448Keys = x448.keygen();
+    const x448PrivKey = x448Keys.secretKey;
+    const x448PubKey = x448Keys.publicKey;
 
-    const keyId = bytesToHex(sha3_512(concatBytes(dsaKeys.publicKey, edKeys.publicKey))).substring(0, 16).toUpperCase();
-    const fingerprint = bytesToHex(sha3_512(concatBytes(dsaKeys.publicKey, edKeys.publicKey))).toUpperCase();
+    const keyId = bytesToHex(sha3_512(concatBytes(slhdsaKeys.publicKey, edKeys.publicKey))).substring(0, 16).toUpperCase();
+    const fingerprint = bytesToHex(sha3_512(concatBytes(slhdsaKeys.publicKey, edKeys.publicKey))).toUpperCase();
     const formattedFingerprint = fingerprint.match(/.{1,4}/g)?.join(' ') || fingerprint;
 
     const pubObj = {
-      dsaPub: base64Encode(dsaKeys.publicKey),
+      slhdsaPub: base64Encode(slhdsaKeys.publicKey),
       edPub: base64Encode(edKeys.publicKey),
-      xwingPub: base64Encode(xwingKeys.publicKey)
+      mlkemPub: base64Encode(mlkemKeys.publicKey),
+      x448Pub: base64Encode(x448PubKey)
     };
 
     const privObj = {
-      dsaPriv: base64Encode(dsaKeys.secretKey),
+      slhdsaPriv: base64Encode(slhdsaKeys.secretKey),
       edPriv: base64Encode(edKeys.secretKey),
-      xwingPriv: base64Encode(xwingKeys.secretKey)
+      mlkemPriv: base64Encode(mlkemKeys.secretKey),
+      x448Priv: base64Encode(x448PrivKey)
     };
 
     const createdAt = new Date();
@@ -175,13 +182,23 @@ export const rpgpMockService = {
     if (!targetKey) throw new Error("Recipient key not found");
 
     const pubData = unwrapArmor('PGP PUBLIC KEY BLOCK', targetKey.publicKeyArmored);
-    const xwingPub = base64Decode(pubData.xwingPub);
+    const mlkemPub = base64Decode(pubData.mlkemPub);
+    const x448Pub = base64Decode(pubData.x448Pub);
 
-    // XWing KEM Encapsulation
-    const { cipherText, sharedSecret } = XWing.encapsulate(xwingPub);
+    // ML-KEM-1024 Encapsulation
+    const { cipherText: mlkemCt, sharedSecret: mlkemSS } = ml_kem1024.encapsulate(mlkemPub);
 
-    // Derive AES-256-GCM key from shared secret using SHA3-512
-    const aesKeyBytes = sha3_512(sharedSecret).slice(0, 32);
+    // X448 Key Agreement
+    const x448EphemeralKeys = x448.keygen();
+    const x448EphemeralPriv = x448EphemeralKeys.secretKey;
+    const x448EphemeralPub = x448EphemeralKeys.publicKey;
+    const x448SS = x448.getSharedSecret(x448EphemeralPriv, x448Pub);
+
+    // Combine both shared secrets using SHA3-512
+    const combinedSecret = sha3_512(concatBytes(mlkemSS, x448SS));
+
+    // Derive AES-256-GCM key from combined secret
+    const aesKeyBytes = combinedSecret.slice(0, 32);
 
     // AES-256-GCM Payload Encryption
     const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -193,7 +210,8 @@ export const rpgpMockService = {
     );
 
     const msgData = {
-      xwingCt: base64Encode(cipherText),
+      mlkemCt: base64Encode(mlkemCt),
+      x448EphPub: base64Encode(x448EphemeralPub),
       iv: base64Encode(iv),
       ct: base64Encode(new Uint8Array(encrypted)),
       recipient: targetKey.keyId
@@ -209,14 +227,22 @@ export const rpgpMockService = {
     const privData = unwrapArmor('PGP PRIVATE KEY BLOCK', key.privateKeyArmored);
     const msgData = unwrapArmor('PGP MESSAGE', params.ciphertext);
 
-    const xwingPriv = base64Decode(privData.xwingPriv);
-    const xwingCt = base64Decode(msgData.xwingCt);
+    const mlkemPriv = base64Decode(privData.mlkemPriv);
+    const x448Priv = base64Decode(privData.x448Priv);
+    const mlkemCt = base64Decode(msgData.mlkemCt);
+    const x448EphPub = base64Decode(msgData.x448EphPub);
 
-    // XWing KEM Decapsulation
-    const sharedSecret = XWing.decapsulate(xwingCt, xwingPriv);
+    // ML-KEM-1024 Decapsulation
+    const mlkemSS = ml_kem1024.decapsulate(mlkemCt, mlkemPriv);
 
-    // Derive AES-256-GCM key from shared secret using SHA3-512
-    const aesKeyBytes = sha3_512(sharedSecret).slice(0, 32);
+    // X448 Key Agreement
+    const x448SS = x448.getSharedSecret(x448Priv, x448EphPub);
+
+    // Combine both shared secrets using SHA3-512
+    const combinedSecret = sha3_512(concatBytes(mlkemSS, x448SS));
+
+    // Derive AES-256-GCM key from combined secret
+    const aesKeyBytes = combinedSecret.slice(0, 32);
 
     // AES-256-GCM Decryption
     const cryptoKey = await crypto.subtle.importKey('raw', aesKeyBytes, 'AES-GCM', false, ['decrypt']);
@@ -236,11 +262,11 @@ export const rpgpMockService = {
     const privData = unwrapArmor('PGP PRIVATE KEY BLOCK', key.privateKeyArmored);
     const msgBytes = new TextEncoder().encode(params.message);
 
-    const dsaSig = ml_dsa65.sign(msgBytes, base64Decode(privData.dsaPriv));
+    const slhdsaSig = slh_dsa_sha2_256s.sign(msgBytes, base64Decode(privData.slhdsaPriv));
     const edSig = ed25519.sign(msgBytes, base64Decode(privData.edPriv));
 
     const sigData = {
-      dsaSig: base64Encode(dsaSig),
+      slhdsaSig: base64Encode(slhdsaSig),
       edSig: base64Encode(edSig),
       signer: key.keyId
     };
@@ -256,11 +282,11 @@ export const rpgpMockService = {
     const privData = unwrapArmor('PGP PRIVATE KEY BLOCK', key.privateKeyArmored);
     const msgBytes = new TextEncoder().encode(params.message);
 
-    const dsaSig = ml_dsa65.sign(msgBytes, base64Decode(privData.dsaPriv));
+    const slhdsaSig = slh_dsa_sha2_256s.sign(msgBytes, base64Decode(privData.slhdsaPriv));
     const edSig = ed25519.sign(msgBytes, base64Decode(privData.edPriv));
 
     const sigData = {
-      dsaSig: base64Encode(dsaSig),
+      slhdsaSig: base64Encode(slhdsaSig),
       edSig: base64Encode(edSig),
       signer: key.keyId
     };
@@ -276,14 +302,14 @@ export const rpgpMockService = {
     const sigData = unwrapArmor('PGP SIGNATURE', params.signature);
 
     const msgBytes = new TextEncoder().encode(params.message);
-    const dsaOk = ml_dsa65.verify(base64Decode(sigData.dsaSig), msgBytes, base64Decode(pubData.dsaPub));
+    const slhdsaOk = slh_dsa_sha2_256s.verify(base64Decode(sigData.slhdsaSig), msgBytes, base64Decode(pubData.slhdsaPub));
     const edOk = ed25519.verify(base64Decode(sigData.edSig), msgBytes, base64Decode(pubData.edPub));
 
-    const isValid = dsaOk && edOk;
+    const isValid = slhdsaOk && edOk;
     return {
       isValid,
       message: isValid
-        ? `XWing-grade cryptographic integrity confirmed. Verified hybrid signature (ML-DSA-65 + Ed25519) for identity ${key.userId}.`
+        ? `Post-quantum cryptographic integrity confirmed. Verified hybrid signature (SLH-DSA-SHA2-256s + Ed25519) for identity ${key.userId}.`
         : `Verification FAILED. Signature mismatch or data corruption detected.`
     };
   }
