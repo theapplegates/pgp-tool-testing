@@ -6,7 +6,7 @@ import { Alert } from './common/Alert';
 import { Spinner } from './common/Spinner';
 import { rpgpMockService } from '../services/rpgpMockService';
 import { RpgpPublicKey } from '../types';
-import { PencilSquareIcon, ClipboardDocumentIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { PencilSquareIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
 
 interface SignSectionProps {
   availableKeys: RpgpPublicKey[];
@@ -66,16 +66,6 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
     navigator.clipboard.writeText(text)
       .then(() => setSuccessMessage(`${type} copied to clipboard!`))
       .catch(err => setError(`Failed to copy ${type}: ${err}`));
-  };
-
-  const downloadFile = (content: string, filename: string) => {
-    const element = document.createElement('a');
-    const file = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    element.href = URL.createObjectURL(file);
-    element.download = filename;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
   };
 
 
@@ -160,24 +150,15 @@ export const SignSection: React.FC<SignSectionProps> = ({ availableKeys }) => {
             rows={10}
             className="font-mono text-xs"
           />
-          <div className="flex space-x-2 mt-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => downloadFile(signedOutput, `signature-${selectedPrivateKeyId.substring(0,8)}.asc`)}
-              leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}
-            >
-              Download
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => copyToClipboard(signedOutput, "Signature block")}
-              leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}
-            >
-              Copy
-            </Button>
-          </div>
+           <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={() => copyToClipboard(signedOutput, "Signature block")}
+            className="mt-2"
+            leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}
+          >
+            Copy Signature
+          </Button>
         </div>
       )}
     </div>

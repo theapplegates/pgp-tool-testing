@@ -5,7 +5,7 @@ import { Alert } from './common/Alert';
 import { Spinner } from './common/Spinner';
 import { rpgpMockService } from '../services/rpgpMockService';
 import { RpgpPublicKey } from '../types';
-import { LockClosedIcon, ClipboardDocumentIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { LockClosedIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline';
 
 interface EncryptSectionProps {
   availableKeys: RpgpPublicKey[];
@@ -52,16 +52,6 @@ export const EncryptSection: React.FC<EncryptSectionProps> = ({ availableKeys })
     navigator.clipboard.writeText(text)
       .then(() => setSuccessMessage('Ciphertext copied to clipboard!'))
       .catch(err => setError(`Failed to copy: ${err}`));
-  };
-
-  const downloadFile = (content: string, filename: string) => {
-    const element = document.createElement('a');
-    const file = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    element.href = URL.createObjectURL(file);
-    element.download = filename;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
   };
 
 
@@ -124,24 +114,15 @@ export const EncryptSection: React.FC<EncryptSectionProps> = ({ availableKeys })
             rows={8}
             className="font-mono text-xs"
           />
-          <div className="flex space-x-2 mt-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => downloadFile(ciphertext, `encrypted-${selectedRecipientKeyId.substring(0,8)}.asc`)}
-              leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}
-            >
-              Download
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => copyToClipboard(ciphertext)}
-              leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}
-            >
-              Copy
-            </Button>
-          </div>
+          <Button 
+            variant="secondary" 
+            size="sm" 
+            onClick={() => copyToClipboard(ciphertext)}
+            className="mt-2"
+            leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}
+          >
+            Copy Armor Block
+          </Button>
         </div>
       )}
     </div>

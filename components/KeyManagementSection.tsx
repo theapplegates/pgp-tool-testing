@@ -8,7 +8,7 @@ import { Spinner } from './common/Spinner';
 import { rpgpMockService } from '../services/rpgpMockService';
 import { RpgpPublicKey, RpgpKeyPair } from '../types';
 import { PRIMARY_SIGNING_ALGORITHM, ENCRYPTION_SUBKEY_ALGORITHM } from '../constants';
-import { UserPlusIcon, KeyIcon, ClipboardDocumentIcon, EyeIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { UserPlusIcon, KeyIcon, ClipboardDocumentIcon, EyeIcon } from '@heroicons/react/24/outline';
 
 interface KeyManagementSectionProps {
   onKeyGenerated: (key: RpgpPublicKey) => void;
@@ -53,16 +53,6 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
     navigator.clipboard.writeText(text)
       .then(() => alert(`${type} copied to clipboard!`))
       .catch(err => alert(`Failed to copy ${type}: ${err}`));
-  };
-
-  const downloadFile = (content: string, filename: string) => {
-    const element = document.createElement('a');
-    const file = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    element.href = URL.createObjectURL(file);
-    element.download = filename;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
   };
 
   return (
@@ -152,19 +142,13 @@ export const KeyManagementSection: React.FC<KeyManagementSectionProps> = ({ onKe
             <div>
               <h4 className="font-semibold mb-1 text-neutral-800 dark:text-neutral-200">Public Key Armored Block:</h4>
               <TextArea value={generatedKey.publicKeyArmored} readOnly rows={6} className="text-xs font-mono" />
-              <div className="flex space-x-2 mt-2">
-                <Button size="sm" variant="secondary" onClick={() => downloadFile(generatedKey.publicKeyArmored, `public-key-${generatedKey.keyId.substring(0,8)}.asc`)} leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}>Download</Button>
-                <Button size="sm" variant="secondary" onClick={() => copyToClipboard(generatedKey.publicKeyArmored, 'Public Key')} leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}>Copy</Button>
-              </div>
+              <Button size="sm" variant="secondary" onClick={() => copyToClipboard(generatedKey.publicKeyArmored, 'Public Key')} className="mt-2" leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}>Copy Public Key</Button>
             </div>
             {'privateKeyArmored' in generatedKey && (
               <div>
                 <h4 className="font-semibold mb-1 text-neutral-800 dark:text-neutral-200">Private Key Armored Block:</h4>
                 <TextArea value={generatedKey.privateKeyArmored} readOnly rows={6} className="text-xs font-mono" />
-                <div className="flex space-x-2 mt-2">
-                  <Button size="sm" variant="secondary" onClick={() => downloadFile(generatedKey.privateKeyArmored, `private-key-${generatedKey.keyId.substring(0,8)}.asc`)} leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}>Download</Button>
-                  <Button size="sm" variant="secondary" onClick={() => copyToClipboard(generatedKey.privateKeyArmored, 'Private Key')} leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}>Copy</Button>
-                </div>
+                <Button size="sm" variant="secondary" onClick={() => copyToClipboard(generatedKey.privateKeyArmored, 'Private Key')} className="mt-2" leftIcon={<ClipboardDocumentIcon className="h-4 w-4" />}>Copy Private Key</Button>
               </div>
             )}
           </div>
