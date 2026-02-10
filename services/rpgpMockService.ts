@@ -1,9 +1,8 @@
-import { ml_kem768 } from '@noble/post-quantum/ml_kem768';
-// import { ml_dsa65 } from '@noble/post-quantum/ml_dsa65';
-import { ed25519, x25519 } from '@noble/curves/ed25519';
-import { sha512 } from '@noble/hashes/sha512';
-import { sha256 } from '@noble/hashes/sha256';
-import { bytesToHex, concatBytes } from '@noble/hashes/utils';
+import { ml_kem768 } from '@noble/post-quantum/ml-kem.js';
+import { ml_dsa65 } from '@noble/post-quantum/ml-dsa.js';
+import { ed25519, x25519 } from '@noble/curves/ed25519.js';
+import { sha512, sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, concatBytes } from '@noble/hashes/utils.js';
 import { RpgpPublicKey, RpgpKeyPair, GenerateKeyParams, EncryptParams, DecryptParams, SignParams, VerifyParams } from '../types';
 import { PRIMARY_SIGNING_ALGORITHM, ENCRYPTION_SUBKEY_ALGORITHM } from '../constants';
 
@@ -36,13 +35,13 @@ const unwrapArmor = (label: string, armored: string) => {
 export const rpgpMockService = {
   generateKeyPair: async (params: GenerateKeyParams): Promise<RpgpKeyPair> => {
     // 1. Generate Signature Keys (ML-DSA-65 + Ed25519)
-    const dsaKeys = ml_dsa65.generateKeyPair();
-    const edPriv = ed25519.utils.randomPrivateKey();
+    const dsaKeys = ml_dsa65.keygen();
+    const edPriv = ed25519.utils.randomSecretKey();
     const edPub = ed25519.getPublicKey(edPriv);
 
     // 2. Generate Encryption Keys (ML-KEM-768 + X25519)
-    const kemKeys = ml_kem768.generateKeyPair();
-    const xPriv = x25519.utils.randomPrivateKey();
+    const kemKeys = ml_kem768.keygen();
+    const xPriv = x25519.utils.randomSecretKey();
     const xPub = x25519.getPublicKey(xPriv);
 
     const keyId = bytesToHex(sha256(concatBytes(dsaKeys.publicKey, edPub))).substring(0, 16).toUpperCase();
@@ -56,9 +55,9 @@ export const rpgpMockService = {
     };
     
     const privObj = {
-      dsaPriv: base64Encode(dsaKeys.privateKey),
+      dsaPriv: base64Encode(dsaKeys.secretKey),
       edPriv: base64Encode(edPriv),
-      kemPriv: base64Encode(kemKeys.privateKey),
+      kemPriv: base64Encode(kemKeys.secretKey),
       xPriv: base64Encode(xPriv)
     };
 
@@ -97,7 +96,7 @@ export const rpgpMockService = {
     const { ciphertext: kemCt, sharedSecret: kemSs } = ml_kem768.encapsulate(kemPub);
 
     // 2. X25519 Ephemeral Key Exchange
-    const ephemeralXPriv = x25519.utils.randomPrivateKey();
+    const ephemeralXPriv = x25519.utils.randomSecretKey();
     const ephemeralXPub = x25519.getPublicKey(ephemeralXPriv);
     const xSs = x25519.getSharedSecret(ephemeralXPriv, xPub);
 
@@ -199,7 +198,7 @@ export const rpgpMockService = {
     const sigData = unwrapArmor('PGP SIGNATURE', params.signature);
 
     const msgBytes = new TextEncoder().encode(params.message);
-    const dsaOk = ml_dsa65.verify(msgBytes, base64Decode(sigData.dsaSig), base64Decode(pubData.dsaPub));
+    const dsaOk = ml_dsa65.verify(base64Decode(sigData.dsaSig), msgBytes, base64Decode(pubData.dsaPub));
     const edOk = ed25519.verify(base64Decode(sigData.edSig), msgBytes, base64Decode(pubData.edPub));
 
     const isValid = dsaOk && edOk;
